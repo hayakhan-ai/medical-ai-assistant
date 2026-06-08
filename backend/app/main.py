@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from backend.app.rag import search_medical_data
-from backend.app.llm import generate_response
+from app.rag import search_medical_data
+from app.llm import generate_response
 
 app = FastAPI()
 
