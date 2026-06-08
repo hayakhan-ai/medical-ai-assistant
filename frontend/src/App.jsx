@@ -17,7 +17,7 @@ export default function App() {
     try {
 
       const res = await axios.post(
-        "https://saul-monic-damon.ngrok-free.dev/chat",
+        "http://127.0.0.1:8000/chat",
         {
           message
         }
