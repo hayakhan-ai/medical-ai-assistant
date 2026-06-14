@@ -32,8 +32,6 @@ async def chat(req: ChatRequest):
             "context": None,
             "response": (
                 "Hello! I am a Medical AI Assistant. "
-                "You can ask me about symptoms, diseases, treatments, medicines, "
-                "or which medical specialist to consult."
             )
         }
 
@@ -44,11 +42,19 @@ async def chat(req: ChatRequest):
             "response": "I can only answer medical-related questions."
         }
 
-    context = search_medical_data(req.message)
-    answer = generate_response(req.message, context)
+    try:
+         context = search_medical_data(req.message)
+         answer = generate_response(req.message, context)
 
-    return {
+         return {
+             "query": req.message,
+             "context": context,
+             "response": answer
+             }
+
+    except Exception as e:
+        return {
         "query": req.message,
-        "context": context,
-        "response": answer
+        "context": None,
+        "response": f"Internal error: {str(e)}"
     }

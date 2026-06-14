@@ -133,19 +133,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-client = Groq(api_key=GROQ_API_KEY)
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 def classify_query(query: str) -> str:
-    """
-    Returns one of:
-    - GREETING
-    - MEDICAL
-    - NON_MEDICAL
-    """
-
     prompt = f"""
 You are a query classifier.
 
@@ -156,13 +147,11 @@ GREETING:
 - hello
 - hey
 - good morning
-- good afternoon
 - good evening
 - salam
 - assalamualaikum
 - aoa
 - how are you
-- greetings
 
 MEDICAL:
 - Diseases
@@ -170,24 +159,13 @@ MEDICAL:
 - Treatments
 - Medicines
 - Doctors
-- Healthcare
-- Medical specialties
 - Hospitals
+- Healthcare
 - Diagnostics
-- Mental health
-- Medical advice
-- Health concerns
+- Medical specialties
 
 NON_MEDICAL:
-- Programming
-- Sports
-- Politics
-- Entertainment
-- Mathematics
-- History
-- Finance
-- General knowledge
-- Any topic unrelated to healthcare
+Everything unrelated to healthcare.
 
 User Message:
 {query}
@@ -199,7 +177,7 @@ MEDICAL
 NON_MEDICAL
 """
 
-    chat = client.chat.completions.create(
+    response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         temperature=0,
         messages=[
@@ -210,41 +188,56 @@ NON_MEDICAL
         ]
     )
 
-    return chat.choices[0].message.content.strip().upper()
+    return (response.choices[0].message.content or "").strip().upper()
 
 
 def generate_response(query, context):
     """
-    Generate a medical response using retrieved context.
+    context = list returned from search_medical_data()
     """
 
     if not context:
         return (
-            "I could not find sufficient medical information in my dataset "
-            "to answer this question."
+            "I could not find sufficient medical information in my dataset."
         )
+
+    # Convert MongoDB payloads into text
+    medical_context = ""
+
+    for item in context:
+        medical_context += f"""
+Treatment:
+{item.get('treatment','')}
+
+Category:
+{item.get('category','')}
+
+Description:
+{item.get('description','')}
+
+------------------------------------
+"""
 
     prompt = f"""
 You are a Medical AI Assistant.
 
-Use ONLY the medical context provided below.
+Use ONLY the medical context below.
 
 Medical Context:
-{context}
+{medical_context}
 
 User Question:
 {query}
 
 Rules:
-1. Answer only medical questions.
-2. Use only the provided context.
-3. Do not invent diagnoses, diseases, medicines, or treatments.
-4. If the context is insufficient, respond:
-   "I could not find sufficient medical information in my dataset."
-5. Do not answer non-medical questions.
-6. Mention that the response is informational and not a medical diagnosis.
 
-Provide your answer in this format:
+1. Use only the supplied context.
+2. Do not invent diseases or treatments.
+3. If context is insufficient say:
+"I could not find sufficient medical information in my dataset."
+4. Mention that the response is informational and not a diagnosis.
+
+Format:
 
 Recommended Specialist:
 ...
@@ -259,16 +252,13 @@ Disclaimer:
 This information is for educational purposes only and is not a medical diagnosis.
 """
 
-    chat = client.chat.completions.create(
+    response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         temperature=0,
         messages=[
             {
                 "role": "system",
-                "content": (
-                    "You are a medical assistant. "
-                    "Use only the provided medical context."
-                )
+                "content": "You are a medical assistant. Use only the provided context."
             },
             {
                 "role": "user",
@@ -277,4 +267,4 @@ This information is for educational purposes only and is not a medical diagnosis
         ]
     )
 
-    return chat.choices[0].message.content.strip()
+    return (response.choices[0].message.content or "").strip()
