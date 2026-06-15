@@ -119,8 +119,6 @@ Possible Condition:
 General Advice:
 ...
 
-Disclaimer:
-This information is for educational purposes only and is not a medical diagnosis.
 """
             },
             {
