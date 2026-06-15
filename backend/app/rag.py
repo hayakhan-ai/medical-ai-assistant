@@ -36,7 +36,7 @@ except Exception:
 def load_data():
 
     data = fetch_treatments()
-    print("Categories:", len(data))
+    print("Documents:", len(data))
 
     if not data:
         print("No treatments found in MongoDB.")
@@ -49,40 +49,31 @@ def load_data():
         return
 
     points = []
-    idx = 0
 
-    for category in data:
+    for idx, treatment in enumerate(data):
 
-        category_name = category.get("categoryName", "")
-
-        for treatment in category.get("treatments", []):
-
-            text = f"""
-Category: {category_name}
-
-Treatment: {treatment.get('subCategory', '')}
+        text = f"""
+Treatment:
+{treatment.get('subCategory', '')}
 
 Description:
 {treatment.get('description', '')}
 """
 
-            embedding = model.encode(text).tolist()
+        embedding = model.encode(text).tolist()
 
-            points.append(
-                PointStruct(
-                    id=idx,
-                    vector=embedding,
-                    payload={
-                        "category": category_name,
-                        "treatment": treatment.get("subCategory", ""),
-                        "description": treatment.get("description", "")
-                    }
-                )
+        points.append(
+            PointStruct(
+                id=idx,
+                vector=embedding,
+                payload={
+                    "treatment": treatment.get("subCategory", ""),
+                    "description": treatment.get("description", "")
+                }
             )
+        )
 
-            idx += 1
-
-    print("Total points:", len(points))        
+    print("Total points:", len(points))
 
     client.upsert(
         collection_name=COLLECTION_NAME,
@@ -90,9 +81,9 @@ Description:
     )
 
     print(
-    "Count after upsert:",
-    client.count(collection_name=COLLECTION_NAME).count
-)
+        "Count after upsert:",
+        client.count(collection_name=COLLECTION_NAME).count
+    )
 
 
 
@@ -105,12 +96,14 @@ def search_medical_data(query, limit=5):
         limit=limit
      )
 
-    payloads = [p.payload for p in results.points]
-
     print("\nQUERY:", query)
     print("RESULTS:")
-    for p in payloads:
-        print(p)
+
+    for point in results.points:
+       print("Score:", point.score)
+       print(point.payload)
+
+    payloads = [point.payload for point in results.points]
 
     return payloads
 

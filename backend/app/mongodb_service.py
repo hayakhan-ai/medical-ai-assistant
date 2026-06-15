@@ -4,9 +4,9 @@ import os
 
 load_dotenv()
 
-client = MongoClient(os.getenv("MONGO_URL"))
+client = MongoClient(os.getenv("MONGODB_URI"))
 
-db = client["meditour"]
+db = client["test"]
 collection = db["treatments"]
 
 def fetch_treatments():
