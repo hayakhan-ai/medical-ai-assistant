@@ -1,172 +1,290 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 
 export default function App() {
-
   const [message, setMessage] = useState("");
-  const [response, setResponse] = useState("");
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
+  const [conversations, setConversations] = useState([]);
+
+  useEffect(() => {
+    loadConversations();
+    newChat();
+  }, []);
 
   const sendMessage = async () => {
+  if (!message.trim()) return;
 
-    if (!message.trim()) return;
+  const userQuestion = message;
 
-    setLoading(true);
+  setMessage("");
+  setLoading(true);
 
-    try {
+  try {
+    console.log("Conversation ID:", conversationId);
 
-      const res = await axios.post(
-        "http://127.0.0.1:8000/chat",
-        {
-          message
-        }
-      );
+    const { data } = await axios.post(
+      "http://127.0.0.1:8000/chat",
+      {
+        message: userQuestion,
+        conversation_id: conversationId,
+      }
+    );
 
-      setResponse(res.data.response);
+    console.log(data);
 
-    } catch (error) {
-
-      setResponse("Error connecting to AI backend.");
-
+    // Save conversation ID if backend created a new chat
+    if (!conversationId && data.conversation_id) {
+      setConversationId(data.conversation_id);
     }
 
+    // Add new message pair
+    setMessages((prev) => [
+      ...prev,
+      {
+        question: userQuestion,
+        answer: data.response,
+      },
+    ]);
+
+    // Refresh sidebar
+    await loadConversations();
+
+  } catch (error) {
+    console.error("Send message failed:", error);
+  } finally {
     setLoading(false);
+  }
+};
+  const newChat = async () => {
+     try {
+           const res = await axios.post(
+           "http://127.0.0.1:8000/new-chat",
+        );
+
+          setConversationId(res.data.conversation_id);
+          setMessages([]);
+
+          await loadConversations();
+
+        } catch (err) {
+           console.error(err);
+          }
+  };
+  const loadConversations = async () => {
+         try {
+               const res = await axios.get(
+               "http://127.0.0.1:8000/chat-history"
+               );
+
+               setConversations(res.data);
+
+            } catch (err) {
+             console.error(err);
+            }
+   };
+  const openConversation = async (chat) => {
+
+     try {
+
+          const res = await axios.get(
+      `   http://127.0.0.1:8000/conversation/${chat.conversation_id}`
+          );
+
+          setConversationId(chat.conversation_id);
+
+          const formatted = res.data.messages.map(msg => ({
+          question: msg.question,
+          answer: msg.answer,
+          feedback: null
+      }));
+
+          setMessages(formatted);
+
+      }
+       catch(err){
+       console.error(err);
+      }
   };
 
   return (
-
     <div style={styles.page}>
-
-      <div style={styles.card}>
-
-        <h1 style={styles.title}>
-          🩺 Medical AI Assistant
-        </h1>
-
-        <p style={styles.subtitle}>
-          How can I help you today?
-        </p>
-
-        <textarea
-          rows="6"
-          placeholder="Example: I have skin allergy and itching..."
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          style={styles.textarea}
-        />
-
+      <div style={styles.sidebar}>
         <button
-          onClick={sendMessage}
-          style={styles.button}
+          style={styles.newChat}
+          onClick={newChat}
         >
-          {loading ? "Analyzing..." : "Ask AI"}
+          + New Chat
         </button>
-         
-        {response && (
 
-          <div style={styles.responseBox}>
-
-            <h2 style={styles.responseTitle}>
-              AI Response
-            </h2>
-
-            <div style={styles.responseText}>
-              <ReactMarkdown>
-              {response}
-              </ReactMarkdown>
-            </div>
-
+        {conversations.map((chat) => (
+          <div
+              key={chat.conversation_id}
+              style={styles.history}
+              onClick={() => openConversation(chat)}
+            >
+             {chat.title}
           </div>
-        )}
-
+))}
       </div>
 
+      <div style={styles.chatArea}>
+        <h1 style={styles.title}>
+           ✦ MediTour AI ✦
+        </h1>
+
+        <div style={styles.chatBox}>
+          {messages.map((chat, index) => (
+            <div key={index}>
+              <div style={styles.userBubble}>
+                {chat.question}
+              </div>
+
+              <div style={styles.aiBubble}>
+                <ReactMarkdown>
+                  {chat.answer}
+                </ReactMarkdown>
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div style={styles.aiBubble}>
+              Thinking...
+            </div>
+          )}
+        </div>
+
+        <div style={styles.inputArea}>
+          <textarea
+            rows="3"
+            value={message}
+            placeholder="Ask a medical question..."
+            onChange={(e) =>
+              setMessage(e.target.value)
+            }
+            style={styles.input}
+          />
+
+          <button
+            style={styles.send}
+            onClick={sendMessage}
+          >
+            Send
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 const styles = {
-
   page: {
-    minHeight: "100vh",
     display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background:
-      "linear-gradient(135deg, #0f172a, #1e3a8a, #14b8a6)",
-    fontFamily: "Arial",
+    height: "100vh",
+    background: "#0f172a",
+    color: "white"
+  },
+
+  sidebar: {
+    width: "260px",
+    background: "#111827",
+    padding: "20px",
+    overflowY: "auto"
+  },
+
+  newChat: {
+    width: "100%",
+    padding: "15px",
+    borderRadius: "10px",
+    border: "none",
+    background: "#14b8a6",
+    color: "white",
+    cursor: "pointer"
+  },
+
+  history: {
+    marginTop: "15px",
+    padding: "12px",
+    background: "#1e293b",
+    borderRadius: "10px"
+  },
+
+  chatArea: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
     padding: "20px"
   },
 
-  card: {
-    width: "100%",
-    maxWidth: "700px",
-    background: "rgba(255,255,255,0.1)",
-    backdropFilter: "blur(12px)",
-    borderRadius: "20px",
-    padding: "40px",
-    boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-    border: "1px solid rgba(255,255,255,0.2)"
-  },
-
   title: {
-    color: "white",
+    color: "#fff",
+    fontSize: "3.5rem",
+    fontWeight: "800",
+    letterSpacing: "2px",
     textAlign: "center",
-    fontSize: "38px",
-    marginBottom: "10px"
+    marginBottom: "10px",
+    textShadow: "0 0 15px rgba(255,255,255,0.5)",
+    fontFamily: "'Poppins', sans-serif"
   },
 
-  subtitle: {
-    color: "#dbeafe",
-    textAlign: "center",
-    marginBottom: "30px",
-    fontSize: "18px"
+  chatBox: {
+    flex: 1,
+    overflowY: "auto"
   },
 
-  textarea: {
-    width: "100%",
-    padding: "18px",
-    borderRadius: "14px",
-    border: "none",
-    outline: "none",
-    fontSize: "16px",
-    resize: "none",
-    background: "rgba(255,255,255,0.15)",
-    color: "white",
+  userBubble: {
+    background: "#2563eb",
+    padding: "15px",
+    borderRadius: "15px",
+    margin: "15px 0",
+    alignSelf: "flex-end"
+  },
+
+  aiBubble: {
+    background: "#1e293b",
+    padding: "20px",
+    borderRadius: "15px",
     marginBottom: "20px"
   },
 
-  button: {
-    width: "100%",
-    padding: "16px",
-    borderRadius: "14px",
+  feedbackRow: {
+    display: "flex",
+    gap: "10px",
+    marginTop: "15px"
+  },
+
+  feedbackButton: {
+    padding: "10px",
     border: "none",
-    background:
-      "linear-gradient(90deg, #14b8a6, #3b82f6)",
+    borderRadius: "10px",
+    cursor: "pointer"
+  },
+
+  success: {
+    marginTop: "10px",
+    color: "#4ade80"
+  },
+
+  inputArea: {
+    display: "flex",
+    gap: "10px"
+  },
+
+  input: {
+    flex: 1,
+    padding: "15px",
+    borderRadius: "12px"
+  },
+
+  send: {
+    width: "120px",
+    border: "none",
+    borderRadius: "12px",
+    background: "#14b8a6",
     color: "white",
-    fontSize: "18px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    transition: "0.3s"
-  },
-
-  responseBox: {
-    marginTop: "30px",
-    background: "rgba(255,255,255,0.12)",
-    borderRadius: "16px",
-    padding: "25px",
-    color: "white",
-    border: "1px solid rgba(255,255,255,0.15)"
-  },
-
-  responseTitle: {
-    marginBottom: "15px",
-    color: "#a7f3d0"
-  },
-
-  responseText: {
-    lineHeight: "1.8",
-    color: "#f1f5f9"
+    cursor: "pointer"
   }
 };
