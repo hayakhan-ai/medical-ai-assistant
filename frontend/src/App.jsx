@@ -99,7 +99,7 @@ export default function App() {
       {/* MAIN */}
       <div style={styles.main}>
         <div style={styles.header}>
-          <h2>Medical AI Assistant</h2>
+          <h2>Medical Guide</h2>
           <p>Get preliminary medical guidance and specialist suggestions</p>
         </div>
 
@@ -117,7 +117,7 @@ export default function App() {
           ))}
 
           {loading && (
-            <div style={styles.aiMsg}>Analyzing symptoms...</div>
+            <div style={styles.aiMsg}>Analyzing....</div>
           )}
         </div>
 

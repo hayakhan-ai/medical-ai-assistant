@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 # Embedding model
-model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+model = SentenceTransformer("BAAI/bge-m3")
 
 # Persistent Qdrant storage
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +28,7 @@ except Exception:
     client.create_collection(
         collection_name=COLLECTION_NAME,
         vectors_config=VectorParams(
-            size=384,
+            size=1024,
             distance=Distance.COSINE
         )
     )
@@ -60,7 +60,7 @@ Description:
 {treatment.get('description','')}
 """
 
-        embedding = np.array(model.encode(text)).tolist()
+        embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
 
         points.append(
             PointStruct(
@@ -92,7 +92,7 @@ Description:
             {doctor.get('about','')}
     """
 
-        embedding = np.array(model.encode(text)).tolist()
+        embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
 
         points.append(
             PointStruct(
@@ -125,7 +125,7 @@ Emergency Number:
 {hospital.get('emergencyNo','')}
 """
 
-        embedding = np.array(model.encode(text)).tolist()
+        embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
 
         points.append(
             PointStruct(
@@ -153,7 +153,7 @@ City:
 {lab.get('location',{}).get('city','')}
 """
 
-        embedding = np.array(model.encode(text)).tolist()
+        embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
 
         points.append(
             PointStruct(
@@ -175,7 +175,7 @@ Medical Speciality:
 {speciality.get('specialityTitle','')}
 """
 
-        embedding = np.array(model.encode(text)).tolist()
+        embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
 
         points.append(
             PointStruct(
@@ -208,7 +208,7 @@ Price:
 {test.get('price','')} PKR
 """
 
-        embedding = np.array(model.encode(text)).tolist()
+        embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
 
         points.append(
             PointStruct(
@@ -244,8 +244,8 @@ Price:
 
 
 
-def search_medical_data(query, limit=5):
-    query_embedding = np.array(model.encode(query)).tolist()
+def search_medical_data(query, limit=3):
+    query_embedding = np.array(model.encode(query, normalize_embeddings=True)).tolist()
 
     results = client.query_points(
         collection_name=COLLECTION_NAME,

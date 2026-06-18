@@ -4,7 +4,8 @@ from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from app.rag import search_medical_data
 from app.llm import generate_response, classify_query, generate_chat_title
-from app.mongodb_service import create_conversation, save_message, get_conversations, get_messages, get_conversation, update_conversation_title, conversation_collection
+from app.mongodb_service import create_conversation, save_message, get_conversations, get_messages, get_conversation, update_conversation_title, get_user_questions
+
 
 app = FastAPI()
 
@@ -37,66 +38,32 @@ async def chat(req: ChatRequest):
         if not conversation_id:
             conversation_id = create_conversation()
 
+        # Recent history only
         history = get_messages(conversation_id)[-6:]
 
+        # Current conversation
         conversation = get_conversation(conversation_id) or {}
 
-        if not conversation.get("title_generated", False):
+        # Has title already been generated?
+        title_generated = conversation.get(
+            "title_generated",
+            False
+        )
 
-            title = generate_chat_title(req.message)
+        if query_type in ["GREETING","NON-MEDICAL","THANKS","GOODBYE","ACKNOWLEDGEMENT"]:
 
-            update_conversation_title(
-                conversation_id,
-                title
+            answer = generate_response(
+            req.message,
+            [],
+            history
             )
 
-            conversation_collection.update_one(
-                {"conversation_id": conversation_id},
-                {
-                     "$set": {
-                       "title_generated": True
-                    }
-                }
+            save_message(
+            conversation_id,
+            req.message,
+            answer
             )
-    
-
-        if query_type == "GREETING":
-
-            answer = """
-👋 Hello! I'm your Medical AI Assistant.
-
-I can help with:
-
-• Symptoms
-• Diseases
-• Treatments
-• Tests
-• Doctors
-• Hospitals
-• Laboratories
-• Medical specialties
-
-How may I assist you today?
-"""
-
-        elif query_type == "NON_MEDICAL":
-
-            answer = """
-Sorry, I am a Medical AI Assistant and can only help with healthcare-related topics.
-
-"""
-        elif query_type == "THANKS":
-            answer = """
-You're welcome!
-"""
-        elif query_type == "GOODBYE":
-            answer = """
-Goodbye! Take care and stay healthy! If you have any more questions in the future, feel free to reach out. 👋
-"""
-        elif query_type == "ACKNOWLEDGEMENT":
-            answer = """
-I understand. If you have any specific questions or need assistance, feel free to ask!
-"""
+   
         elif query_type == "FOLLOW_UP" and len(history) > 0:
               
             recent_questions = [
@@ -138,11 +105,27 @@ I understand. If you have any specific questions or need assistance, feel free t
                 history
             )
 
-        save_message(
-            conversation_id,
-            req.message,
-            answer
-        )
+            save_message(
+                conversation_id,
+                req.message,
+                answer
+            )
+
+            # Generate title once after 3 messages
+            if not title_generated:
+
+                 questions = get_user_questions(conversation_id)
+
+                 if len(questions) >= 3:
+
+                     title = generate_chat_title(
+                         "\n".join(questions[:4])
+                    )
+
+                     update_conversation_title(
+                         conversation_id,
+                         title
+                    )
 
         return {
             "conversation_id": conversation_id,

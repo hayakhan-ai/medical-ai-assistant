@@ -178,9 +178,21 @@ def update_conversation_title(conversation_id, title):
         },
         {
             "$set": {
-                "title": title
+                "title": title,
+                "title_generated": True
             }
         }
     )
 
-   
+def get_user_questions(conversation_id):
+
+    conversation = get_conversation(conversation_id)
+
+    if conversation:
+
+        return [
+            msg["question"]
+            for msg in conversation["messages"]
+        ]
+
+    return []
