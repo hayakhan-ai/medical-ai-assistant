@@ -76,7 +76,7 @@ export default function App() {
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <div style={styles.brand}>
-          MediTour Global
+          🌎 MediTour Global
         </div>
 
         <button style={styles.newChatBtn} onClick={newChat}>
@@ -99,11 +99,31 @@ export default function App() {
       {/* MAIN */}
       <div style={styles.main}>
         <div style={styles.header}>
-          <h2>Medical Guide</h2>
-          <p>Get preliminary medical guidance and specialist suggestions</p>
+          <h2>Your AI Heath Companion</h2>
+          <p style={{ color: "#64748B" }}>
+             Receive personalized medical guidance and connect with trusted specialists worldwide.
+          </p>
         </div>
 
         <div style={styles.chatCard}>
+          {messages.length === 0 && (
+  <div
+    style={{
+      textAlign: "center",
+      marginTop: "120px",
+      color: "#64748B",
+    }}
+  >
+    <h1 style={{ color: "#0F172A" }}>
+      How can I help you today?
+    </h1>
+
+    <p>
+      Describe your symptoms or ask about treatments,
+      doctors, hospitals, and laboratory tests.
+    </p>
+  </div>
+)}
           {messages.map((chat, i) => (
             <div key={i} style={styles.messageBlock}>
               <div style={styles.userMsg}>
@@ -128,6 +148,12 @@ export default function App() {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Describe your symptoms or ask a medical question..."
             style={styles.input}
+            onKeyDown={(e) => {
+               if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+            }}
           />
 
           <button onClick={sendMessage} style={styles.sendBtn}>
@@ -143,48 +169,51 @@ const styles = {
   app: {
     display: "flex",
     height: "100vh",
-    background: "#f5f7fb",
+    background: "#F8FAFC",
     fontFamily: "Inter, sans-serif",
   },
 
   /* SIDEBAR */
   sidebar: {
     width: "280px",
-    background: "#ffffff",
-    borderRight: "1px solid #e5e7eb",
-    padding: "20px",
+    background: "#0F172A",
+    color: "white",
+    padding: "24px",
+    display: "flex",
+    flexDirection: "column",
   },
 
   brand: {
-    fontSize: "20px",
+    fontSize: "24px",
     fontWeight: "700",
-    color: "#2563eb",
-    marginBottom: "20px",
+    color: "#00A6A6",
+    marginBottom: "30px",
   },
 
   newChatBtn: {
-    width: "100%",
-    padding: "12px",
-    background: "#2563eb",
+    background: "#00A6A6",
     color: "white",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "14px",
+    padding: "14px",
     cursor: "pointer",
-    marginBottom: "20px",
+    fontSize: "15px",
+    marginBottom: "25px",
   },
 
   sectionTitle: {
-    fontSize: "12px",
-    color: "#6b7280",
+    color: "#94A3B8",
+    fontSize: "13px",
     marginBottom: "10px",
   },
 
   chatItem: {
-    padding: "10px",
-    borderRadius: "8px",
+    background: "#1E293B",
+    padding: "14px",
+    borderRadius: "12px",
+    marginBottom: "10px",
     cursor: "pointer",
-    background: "#f3f4f6",
-    marginBottom: "8px",
+    transition: ".2s",
   },
 
   /* MAIN */
@@ -192,62 +221,76 @@ const styles = {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    padding: "20px",
   },
 
   header: {
-    marginBottom: "20px",
+    background: "white",
+    borderBottom: "1px solid #E2E8F0",
+    padding: "20px 40px",
   },
 
   chatCard: {
     flex: 1,
     overflowY: "auto",
-    background: "#ffffff",
-    borderRadius: "12px",
-    padding: "20px",
-    border: "1px solid #e5e7eb",
+    padding: "40px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
   },
 
   messageBlock: {
-    marginBottom: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
   },
 
   userMsg: {
-    background: "#2563eb",
+    alignSelf: "flex-end",
+    background: "#00A6A6",
     color: "white",
-    padding: "12px",
-    borderRadius: "10px",
-    marginBottom: "10px",
+    padding: "15px 18px",
+    borderRadius: "20px",
     maxWidth: "70%",
-    marginLeft: "auto",
+    lineHeight: "1.6",
   },
 
   aiMsg: {
-    background: "#f3f4f6",
-    padding: "15px",
-    borderRadius: "10px",
-    maxWidth: "85%",
+    background: "white",
+    border: "1px solid #E2E8F0",
+    padding: "18px",
+    borderRadius: "20px",
+    maxWidth: "80%",
+    lineHeight: "1.8",
+    boxShadow: "0 2px 8px rgba(0,0,0,.05)",
   },
 
+  /* INPUT */
   inputBar: {
+    padding: "20px 40px",
+    background: "white",
+    borderTop: "1px solid #E2E8F0",
     display: "flex",
-    gap: "10px",
-    marginTop: "15px",
+    gap: "15px",
   },
 
   input: {
     flex: 1,
-    padding: "12px",
-    borderRadius: "10px",
-    border: "1px solid #d1d5db",
+    border: "1px solid #CBD5E1",
+    borderRadius: "18px",
+    padding: "16px",
+    resize: "none",
+    fontSize: "15px",
+    outline: "none",
+    minHeight: "60px",
   },
 
   sendBtn: {
     width: "120px",
-    background: "#10b981",
+    background: "#00A6A6",
     color: "white",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "18px",
+    fontWeight: "600",
     cursor: "pointer",
   },
 };
