@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 # Embedding model
-model = SentenceTransformer("BAAI/bge-m3")
+model = SentenceTransformer("BAAI/bge-small-en-v1.5")
 
 # Persistent Qdrant storage
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +28,7 @@ except Exception:
     client.create_collection(
         collection_name=COLLECTION_NAME,
         vectors_config=VectorParams(
-            size=1024,
+            size=384,
             distance=Distance.COSINE
         )
     )
@@ -88,8 +88,14 @@ Description:
         Experience:
             {doctor.get('clinicExperience','')} years
 
+        City:
+            {doctor.get('location',{}).get('city','')}
+
+        Address:
+            {doctor.get('location',{}).get('address','')}       
+
         About:
-            {doctor.get('about','')}
+            {doctor.get('about','')[:1200]}
     """
 
         embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
@@ -102,6 +108,11 @@ Description:
                     "type":"doctor",
                     "name":doctor.get("name",""),
                     "speciality":doctor.get("speciality",[]),
+                    "qualifications":doctor.get("qualifications",""),
+                    "experience":doctor.get("clinicExperience",""),
+                    "about":doctor.get("about",""),
+                    "phone":doctor.get("phoneNumber",""),
+                    "address": doctor.get("location",{}).get("address",""),
                     "city":doctor.get("location",{}).get("city","")
                 }
             )
@@ -121,6 +132,9 @@ City:
 Address:
 {hospital.get('location',{}).get('address','')}
 
+Phone:
+{hospital.get('phoneNumber','')}
+
 Emergency Number:
 {hospital.get('emergencyNo','')}
 """
@@ -134,7 +148,10 @@ Emergency Number:
                 payload={
                     "type":"hospital",
                     "name":hospital.get("name",""),
-                    "city":hospital.get("location",{}).get("city","")
+                    "city":hospital.get("location",{}).get("city",""),
+                    "address":hospital.get("location",{}).get("address",""),
+                    "phone":hospital.get("phoneNumber",""),
+                    "emergencyNo":hospital.get("emergencyNo","")
                 }
             )
         )
@@ -151,6 +168,12 @@ Description:
 
 City:
 {lab.get('location',{}).get('city','')}
+
+Phone:
+{lab.get('phoneNumber','')}
+
+EmergencyNo:
+{lab.get('emergencyNo','')}
 """
 
         embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
@@ -162,7 +185,10 @@ City:
                 payload={
                     "type":"laboratory",
                     "name":lab.get("name",""),
-                    "city":lab.get("location",{}).get("city","")
+                    "description":lab.get("description",""),
+                    "city":lab.get("location",{}).get("city",""),
+                    "phone":lab.get("phoneNumber",""),
+                    "emergencyNo":lab.get("emergencyNo","")
                 }
             )
         )
@@ -192,11 +218,7 @@ Medical Speciality:
     for test in tests:
 
         text = f"""
-Medical Test:
-{test.get('name','')}
-
-Category:
-{test.get('categoryName','')}
+        Medical Test
 
 Description:
 {test.get('testDescription','')}
@@ -206,6 +228,7 @@ Duration:
 
 Price:
 {test.get('price','')} PKR
+
 """
 
         embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
@@ -216,12 +239,9 @@ Price:
                 vector=embedding,
                 payload={
                     "type": "test",
-                    "name": test.get("name", ""),
-                    "category": test.get("categoryName", ""),
                     "description": test.get("testDescription", ""),
                     "duration": test.get("duration", ""),
-                    "price": test.get("price", ""),
-                    "code": test.get("testCode", "")
+                    "price": test.get("price", "")
                 }
             )
         )

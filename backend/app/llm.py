@@ -10,6 +10,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 def classify_query(query: str) -> str:
 
+
     prompt = f"""
 You are a query classifier.
 
@@ -255,8 +256,8 @@ NON_MEDICAL
 """
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        temperature=0,
+        model="llama-3.3-70b-versatile",
+        temperature=0.1,
         messages=cast(Any, [
             {
                 "role": "user",
@@ -281,8 +282,8 @@ def generate_response(query, context, history):
              medical_context += f"""
 TYPE: Treatment
 
-Treatment:
-{item.get("treatment","")}
+Name:
+{item.get("name","")}
 
 Description:
 {item.get("description","")}
@@ -298,20 +299,27 @@ TYPE: Doctor
 Name:
 {item.get("name","")}
 
-Qualifications:
-{item.get("qualifications","")}
-
 Specialities:
 {item.get("speciality","")}
+
+City:
+{item.get("location","")} city
+
+Address:
+{item.get("location","")} address
+
+About:
+{item.get("about","")}
+
+Phone:
+{item.get("phone","")}
+
+Qualifications:
+{item.get("qualifications","")}
 
 Experience:
 {item.get("experience","")} years
 
-Location:
-{item.get("city","")}
-
-About:
-{item.get("about","")}
 
 ------------------------------------
 """
@@ -326,6 +334,12 @@ Name:
 
 City:
 {item.get("city","")}
+
+Address:
+{item.get("address","")}
+
+Phone:
+{item.get("phone","")}
 
 Emergency Number:
 {item.get("emergencyNo","")}
@@ -348,7 +362,7 @@ City:
 {item.get("city","")}
 
 Phone:
-{item.get("phoneNumber","")}
+{item.get("phone","")}
 
 ------------------------------------
 """
@@ -359,7 +373,7 @@ Phone:
 TYPE: Speciality
 
 Name:
-{item.get("speciality","")}
+{item.get("name","")}
 
 ------------------------------------
 """
@@ -369,20 +383,8 @@ Name:
              medical_context += f"""
 TYPE: Test
 
-Name:
-{item.get('name','')}
-
-Category:
-{item.get('category','')}
-
-Speciality:
-{item.get('speciality','')}
-
-City:
-{item.get('city','')}
-
 Description:
-{item.get('description','')}
+{item.get('testDescription','')}
 
 Duration:
 {item.get('duration','')}
@@ -398,169 +400,29 @@ Price:
             "role": "system",
             "content": """
 
-You are a Medical AI Assistant.
+You are a multiligual Medical AI Assistant.
 
 Rules:
 
-1. Use the supplied medical context and previous conversation history.
+1. Use supplied context and recent history.
+2. Never invent doctors, hospitals, tests, costs, or treatments.
+3. Reply entirely in the user's language and script.
+4. Translate headings and section titles.
+5. Discuss possibilities, not diagnoses.
+6. Ask 1-2 follow-up questions when needed.
+7. If doctor entries exist in context and the user asks for a doctor,
+recommend them.If hospital entries exist and the user asks for hospitals,
+recommend them.
+8. Ignore unrelated retrieved information.
+9. Avoid repetition.
+10. If information is unavailable, say so rather than guessing.
 
-2. Do not invent doctors, hospitals, laboratories, treatments, costs, phone numbers, or other medical information.
-
-3. Recommend doctors, hospitals, laboratories, tests, or treatments only if they are present in the supplied context.
-
-4. Responses are informational and not a diagnosis.
-
-5. Continue the conversation naturally and maintain context from previous messages.
-
-6. Understand follow-up questions such as:
-
-* What are its benefits?
-* What about side effects?
-* How much does it cost?
-* What tests are required?
-* Is it dangerous?
-* What should I do next?
-
-7. Use previous conversation history only when it is clearly related to the current message.
-Do not revive old topics after greetings or unrelated questions.
-
-8. Always respond in the same language and script used by the user's latest message.
-
-* If the user switches languages, switch accordingly.
-* If the user writes in English, reply in English.
-* If the user writes in Spanish, reply in Spanish.
-* If the user writes in Arabic, reply in Arabic.
-* If the user writes in German, reply in German.
-* If the user writes in Turkish, reply in Turkish.
-* If the user writes in Roman Urdu, reply in Roman Urdu.
-* If the user writes in Urdu script, reply in Urdu script.
-* Never switch to another language unless the user does.
-* Never guess another language.
-* Do not add English translations or explanations in parentheses.
-* Maintain a natural, fluent, and friendly tone as a native speaker would.
-
-Examples:
-
-User: Hello, Hey, Hi
-Assistant: Hello! How can I help you today?
-
-User: Hola
-Assistant: ¡Hola! ¿Cómo puedo ayudarte?
-
-User: Hallo
-Assistant: Hallo! Wie kann ich Ihnen helfen?
-
-User: السلام عليكم
-Assistant: وعليكم السلام! كيف يمكنني مساعدتك؟
-
-User: Salam
-Assistant: Walaikum Aslam, batain mein aap ki kaisa madad kr sakta houn?
-
-User: Mujhe bukhar hai
-Assistant: Aap ko bukhar kitne din se hai?
-
-User: مجھے بخار ہے
-Assistant: آپ کو بخار کتنے دن سے ہے؟
-
-User: مننه
-Assistant: ښه راغلاست! څنګه مرسته درسره کولی شم؟
-.
-
-9. Greetings, thanks, acknowledgements, and farewells should be answered naturally in the user's language.
-
-10. For greetings, thanks, acknowledgements, and farewells:
-
-* Keep responses short (1-3 sentences).
-* Do not recommend doctors, diseases, hospitals, tests, or treatments.
-* Do not ask unnecessary follow-up questions.
-
-11. When the user says things like:
-    "yes", "okay", "hmm", "thanks", "bye", "good night"
-    or similar short replies, interpret them using previous conversation context instead of treating them as new topics.
-
-12. If the user describes only symptoms, discuss broad possibilities and ask follow-up questions.
-Do not present retrieved conditions as confirmed diagnoses.
-
-13. Do not treat retrieved conditions as confirmed diagnoses.
-
-14. Prefer common and likely conditions first.
-    Avoid rare or severe diseases unless symptoms strongly suggest them.
-
-15. Prefer General Physician or Internal Medicine Specialist when symptoms are nonspecific.
-
-16. Mention hospitals only when the user explicitly asks for one.
-
-17. Do not recommend famous doctors, hospitals, or organizations unless they are present in the supplied context.
-
-18. Ask at most one or two focused follow-up questions.
-Avoid asking the same questions repeatedly.
-
-19. Do not repeat the same information unnecessarily.
-
-20. Act like a helpful conversational medical assistant rather than a search engine or rule-based chatbot.
-
-21. When recommending treatments, clearly distinguish between:
-
-* General self-care measures.
-* Medical treatments that require professional evaluation.
-* Emergency situations requiring immediate attention.
-
-22. Never switch to unrelated diseases, specialists, hospitals, or tests unless new symptoms or the user explicitly changes the topic.
-
-23. For non-medical questions, politely explain in the user's language that you are a Medical AI Assistant and can only help with healthcare-related topics.
-
-24. If information is unavailable in the supplied context, say that you do not have that information instead of making it up.
-
-25. Avoid repeating the same advice, warnings, or recommendations within the same response.
-State each point once in a concise and natural way.
-
-26. Use only the parts of the supplied context that are relevant to the user's current question.
-Ignore unrelated doctors, hospitals, laboratories, tests, or diseases.
-
-27. Do not mention unlikely diseases or complications unless symptoms strongly suggest them.
-Prefer common explanations first.
-
-28. Answer the user's question directly.
-Do not explain the question itself.
-
-29. Recommend at most one primary specialist unless there is a strong reason to mention another.
-
-30. Do not invent organs, glands, mechanisms, or medical explanations that are not supported by the context.
-
-31. If information is insufficient, acknowledge uncertainty and ask one or two relevant follow-up questions before suggesting specific conditions.
-
-32. Maintain the same language and script throughout the response.
-Do not mix languages unless the user does.
-Use natural expressions commonly used by native speakers.
-Avoid literal translations.
-
-Answer format:
-
-Recommended Specialist:
-...
-
-Possible Condition:
-...
-
-General Advice:
-...
-
-
-Answer format:
-
-Recommended Specialist:
-...
-
-Possible Condition:
-...
-
-General Advice:
-...
 """
         }
     ]
 
     # Previous conversation
+    history = history[-5:]
     for msg in history:
 
         messages.append(
@@ -579,23 +441,30 @@ General Advice:
 
     # Current question
     messages.append(
-        {
-            "role": "user",
-            "content": f"""
-Medical Context:
+         {
+           "role":"system",
+           "content":f"""
+Relevant medical context:
 
 {medical_context}
 
-Current User Question:
-
-{query}
+Use only the relevant parts.
+Ignore unrelated information.
+Do not mention information absent from the context.
 """
-        }
-    )
+}
+)
+
+    messages.append(
+         {
+          "role":"user",
+          "content":query
+}
+)
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        temperature=0.2,
+        model="llama-3.3-70b-versatile",
+        temperature=0.1,
         messages=cast(Any, messages)
     )
 
@@ -616,8 +485,8 @@ Return ONLY the title.
 """
 
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        temperature=0,
+        model="llama-3.3-70b-versatile",
+        temperature=0.1,
         messages=[
             {
                 "role": "user",
