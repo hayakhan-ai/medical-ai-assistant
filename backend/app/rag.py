@@ -5,8 +5,9 @@ from app.mongodb_service import fetch_treatments, fetch_doctors, fetch_hospitals
 import numpy as np
 import os
 
+os.environ["HF_HOME"] = "D:/huggingface_cache"
 # Embedding model
-model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+model = SentenceTransformer("BAAI/bge-m3")
 
 # Persistent Qdrant storage
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +29,7 @@ except Exception:
     client.create_collection(
         collection_name=COLLECTION_NAME,
         vectors_config=VectorParams(
-            size=384,
+            size=1024,
             distance=Distance.COSINE
         )
     )
@@ -54,7 +55,8 @@ def load_data():
     for treatment in treatments:
 
         text = f"""
-Treatment: {treatment.get('subCategory','')}
+Treatment: 
+{treatment.get('subCategory','')}
 
 Description:
 {treatment.get('description','')}
@@ -92,10 +94,19 @@ Description:
             {doctor.get('location',{}).get('city','')}
 
         Address:
-            {doctor.get('location',{}).get('address','')}       
+            {doctor.get('location',{}).get('address','')}  
+
+        Phone:
+            {doctor.get('phoneNumber','')}
+
+        Email:
+            {doctor.get('email','')}            
+
+        Country:
+            {doctor.get('country','')}            
 
         About:
-            {doctor.get('about','')[:1200]}
+            {doctor.get('about','')[:500]}
     """
 
         embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
@@ -112,8 +123,10 @@ Description:
                     "experience":doctor.get("clinicExperience",""),
                     "about":doctor.get("about",""),
                     "phone":doctor.get("phoneNumber",""),
+                    "email":doctor.get("email",""),
                     "address": doctor.get("location",{}).get("address",""),
-                    "city":doctor.get("location",{}).get("city","")
+                    "city":doctor.get("location",{}).get("city",""),
+                    "country":doctor.get("country","")
                 }
             )
         )
@@ -137,6 +150,15 @@ Phone:
 
 Emergency Number:
 {hospital.get('emergencyNo','')}
+
+Email:
+{hospital.get('email','')}
+
+Open Time:
+{hospital.get('openTime','')}
+
+Country:
+{hospital.get('country','')}
 """
 
         embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
@@ -151,7 +173,10 @@ Emergency Number:
                     "city":hospital.get("location",{}).get("city",""),
                     "address":hospital.get("location",{}).get("address",""),
                     "phone":hospital.get("phoneNumber",""),
-                    "emergencyNo":hospital.get("emergencyNo","")
+                    "open time":hospital.get("openTime",""),
+                    "emergencyNo":hospital.get("emergencyNo",""),
+                    "email":hospital.get("email",""),
+                    "country":hospital.get("country","")
                 }
             )
         )
@@ -169,11 +194,21 @@ Description:
 City:
 {lab.get('location',{}).get('city','')}
 
+Address:
+{lab.get('location',{}).get('address','')}
+
 Phone:
 {lab.get('phoneNumber','')}
 
-EmergencyNo:
+Emergency Number:
 {lab.get('emergencyNo','')}
+
+Email:
+{lab.get('email','')}
+
+Open Time:
+{lab.get('openTime','')}
+
 """
 
         embedding = np.array(model.encode(text, normalize_embeddings=True)).tolist()
@@ -187,8 +222,11 @@ EmergencyNo:
                     "name":lab.get("name",""),
                     "description":lab.get("description",""),
                     "city":lab.get("location",{}).get("city",""),
+                    "address":lab.get("location",{}).get("address",""),
                     "phone":lab.get("phoneNumber",""),
-                    "emergencyNo":lab.get("emergencyNo","")
+                    "emergencyNo":lab.get("emergencyNo",""),
+                    "email":lab.get("email",""),
+                    "open time":lab.get("openTime","")
                 }
             )
         )
@@ -226,8 +264,8 @@ Description:
 Duration:
 {test.get('duration','')}
 
-Price:
-{test.get('price','')} PKR
+Discount:
+{test.get('discount','')} %
 
 """
 
@@ -241,7 +279,7 @@ Price:
                     "type": "test",
                     "description": test.get("testDescription", ""),
                     "duration": test.get("duration", ""),
-                    "price": test.get("price", "")
+                    "discount":test.get("discount","")
                 }
             )
         )
@@ -260,8 +298,6 @@ Price:
         "Count after upsert:",
         client.count(collection_name=COLLECTION_NAME).count
     )
-           
-
 
 
 def search_medical_data(query, limit=3):
@@ -270,7 +306,8 @@ def search_medical_data(query, limit=3):
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,
-        limit=limit
+        limit=limit,
+        score_threshold=0.6
      )
 
     print("\nQUERY:", query)

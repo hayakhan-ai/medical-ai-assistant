@@ -8,265 +8,73 @@ load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-def classify_query(query: str) -> str:
+GREETINGS = {
+    "hi","hello","hey","good morning",
+    "good evening"
+}
+
+THANKS = {
+    "thanks","thank you","ty","thnx"
+}
+
+GOODBYES = {
+    "bye","goodbye","see ya","later"
+}
+
+ACKNOWLEDGEMENTS = {
+    "ok","okay","alright","got it","hmm"
+}
+
+MEDICAL= {
+"Diseases",
+"Symptoms",
+"Treatments",
+"Doctors",
+ "Hospitals",
+ "Healthcare",
+ "Diagnostics",
+ "Medical specialities",
+ "Tests"      
+}
+
+FOLLOW_UPS = {
+    "yes","yeah","tell me more",
+    "details","explain",
+    "side effects","risks",
+    "benefits","location","price",
+    "recovery","duration",
+    "treatment","doctor",
+    "hospital","tests",
+    "what about it",
+    "what about this",
+    "is it dangerous",
+    "how much","tell me more"
+}
+
+NON_MEDICAL ={ "every thing unrelated to medical data"}
+def classify_query(query):
+    q = query.lower().strip()
+
+    if q in GREETINGS:
+        return "GREETING"
+
+    if q in THANKS:
+        return "THANKS"
+
+    if q in GOODBYES:
+        return "GOODBYE"
+
+    if q in ACKNOWLEDGEMENTS:
+        return "ACKNOWLEDGEMENT"
+    
+    if q in FOLLOW_UPS:
+        return "FOLLOW_UP"
+    
+    if q in NON_MEDICAL:
+        return "Non_Medical"
 
 
-    prompt = f"""
-You are a query classifier.
-
-Classify the user message into exactly ONE category.
-
-GREETING:
-- hi
-- hello
-- hey
-- hey there
-- hii
-- hlo
-- yo
-- sup
-- wassup
-- what's up
-- whassup
-- howdy
-- good morning
-- good afternoon
-- good evening
-- good night
-- salam
-- assalamualaikum
-- assalamu alaikum
-- aoa
-- aslam o alaikum
-- how are you
-- how are u
-- how's it going
-- how r u
-
-
-THANKS:
-- thanks
-- thank you
-- thx
-- appreciated
-- shukriya
-- jazakallah
-- thanks a lot
-- many thanks
-- no thanks
-- ty
-
-
-GOODBYE:
-- bye
-- goodbye
-- see you
-- take care
-- allah hafiz
-- khuda hafiz
-- catch you later
-- see you later
-- okay bye
-
-
-ACKNOWLEDGEMENT:
-- okay
-- ok
-- alright
-- fine
-- understood
-- got it
-- i see
-- interesting
-- hmm
-- hmmm
-- acha
-- theek
-- theek hai
-- jee
-- ji
-
-
-FOLLOW_UP:
-# Basic confirmations
-- yes
-- yeah
-- yep
-- yup
-- sure
-- please
-- continue
-- go on
-- carry on
-- proceed
-
-# More information
-- tell me more
-- more
-- more details
-- details
-- explain
-- elaborate
-- expand
-- describe
-- further
-- next
-
-# Risks and side effects
-- risks
-- risk
-- side effects
-- complications
-- drawbacks
-- disadvantages
-- danger
-- harmful effects
-- what are the risks
-- what are the side effects
-
-# Benefits
-- benefits
-- advantages
-- pros
-- positive effects
-- how does it help
-- why is it done
-
-# Cost
-- cost
-- price
-- charges
-- expenses
-- how much
-- how much does it cost
-
-# Recovery
-- recovery
-- healing
-- recovery time
-- duration
-- when will i recover
-
-# Medicines
-- medicines
-- medication
-- drugs
-- tablets
-- which medicine
-
-# Causes and symptoms
-- causes
-- symptoms
-- signs
-- reasons
-- why does it happen
-
-# Diagnosis and tests
-- tests
-- diagnosis
-- investigations
-- lab tests
-- which test
-
-# Treatment
-- treatment
-- therapy
-- procedure
-- operation
-- surgery
-
-# Doctors and hospitals
-- doctor
-- specialist
-- hospital
-- laboratory
-- lab
-
-# Pronoun follow-ups
-- what about it
-- what about this
-- what about that
-- what are its benefits
-- what are its risks
-- what are the complications
-- is it dangerous
-- is it safe
-- can it be cured
-- can it spread
-- can it come back
-- how is it treated
-- what should i do
-- what happens next
-
-# Urdu
-- haan
-- han
-- acha
-- aur batao
-- mazeed
-- mazeed bataen
-- phir
-- agay
-- continue karo
-- aur
-- aur kya
-- kya faide hain
-- kya nuqsanat hain
-- kya side effects hain
-
-
-MEDICAL:
-- Diseases
-- Symptoms
-- Treatments
-- Medicines
-- Doctors
-- Hospitals
-- Healthcare
-- Diagnostics
-- Medical specialties
-- Tests
-- Laboratory tests
-- Fever
-- Pain
-- Infection
-- Surgery
-- Medication
-
-IGNORE_FOR_TITLE = (
-    "GREETING",
-    "THANKS",
-    "GOODBYE",
-    "ACKNOWLEDGEMENT",
-    "FOLLOW_UP"
-)
-
-
-NON_MEDICAL:
-Everything unrelated to healthcare.
-
-User Message:
-{query}
-
-Reply with ONLY one word:
-
-GREETING
-MEDICAL
-NON_MEDICAL
-"""
-
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        temperature=0.1,
-        messages=cast(Any, [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ])
-    )
-
-    return (response.choices[0].message.content or "").strip().upper()
+    return "MEDICAL_QUERY"
 
 
 def generate_response(query, context, history):
@@ -303,10 +111,13 @@ Specialities:
 {item.get("speciality","")}
 
 City:
-{item.get("location","")} city
+{item.get("city","")} 
 
 Address:
-{item.get("location","")} address
+{item.get("address","")} 
+
+Country:
+{item.get("country","")}
 
 About:
 {item.get("about","")}
@@ -341,8 +152,17 @@ Address:
 Phone:
 {item.get("phone","")}
 
+Open Time:
+{item.get("open time","")}
+
 Emergency Number:
 {item.get("emergencyNo","")}
+
+Email:
+{item.get("email","")}
+
+Country:
+{item.get("country","")}
 
 ------------------------------------
 """
@@ -361,8 +181,20 @@ Description:
 City:
 {item.get("city","")}
 
+Address:
+{item.get("address","")}
+
 Phone:
 {item.get("phone","")}
+
+Emergency Number:
+{item.get("emergencyNo","")}
+
+Open Time:
+{item.get("open time","")}
+
+Email:
+{item.get("email","")}
 
 ------------------------------------
 """
@@ -384,13 +216,13 @@ Name:
 TYPE: Test
 
 Description:
-{item.get('testDescription','')}
+{item.get('description','')}
 
 Duration:
 {item.get('duration','')}
 
-Price:
-{item.get('price','')}
+Discount:
+{item.get('discount','')} %
 
 ------------------------------------
 """
@@ -399,30 +231,25 @@ Price:
         {
             "role": "system",
             "content": """
-
-You are a multiligual Medical AI Assistant.
+You are a multilingual Medical AI Assistant.
 
 Rules:
 
-1. Use supplied context and recent history.
-2. Never invent doctors, hospitals, tests, costs, or treatments.
-3. Reply entirely in the user's language and script.
-4. Translate headings and section titles.
-5. Discuss possibilities, not diagnoses.
-6. Ask 1-2 follow-up questions when needed.
-7. If doctor entries exist in context and the user asks for a doctor,
-recommend them.If hospital entries exist and the user asks for hospitals,
-recommend them.
-8. Ignore unrelated retrieved information.
-9. Avoid repetition.
-10. If information is unavailable, say so rather than guessing.
+- Use supplied medical context and recent conversation.
+- Never invent doctors, hospitals, tests, prices, phone numbers, or treatments.
+- Reply entirely in the user's language and script, if their GREETINGS, GOODBYES, THANKS, ACKNOWLEDGEMENTS, FOLLOW_UPS in their language reply in that specific language.
+- Discuss possibilities, not diagnoses.
+- Ignore unrelated retrieved information.
+- Ask follow-up questions when necessary.
+- Recommend doctors, hospitals, tests, or laboratories only if present in the supplied context.
+- If information is unavailable, clearly state that it is unavailable.
 
 """
         }
     ]
 
     # Previous conversation
-    history = history[-5:]
+    history = history[-4:]
     for msg in history:
 
         messages.append(
@@ -440,20 +267,18 @@ recommend them.
         )
 
     # Current question
-    messages.append(
-         {
-           "role":"system",
-           "content":f"""
-Relevant medical context:
+    messages.append({
+             "role":"system",
+             "content":f"""
+             Medical context:
 
-{medical_context}
+              {medical_context}
 
-Use only the relevant parts.
-Ignore unrelated information.
-Do not mention information absent from the context.
-"""
-}
-)
+             Only use information found above.
+             Ignore irrelevant entries.
+             Do not invent missing information.
+             """
+             })
 
     messages.append(
          {
@@ -465,34 +290,8 @@ Do not mention information absent from the context.
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         temperature=0.1,
+        max_completion_tokens=400,
         messages=cast(Any, messages)
-    )
-
-    return (response.choices[0].message.content or "").strip()
-
-def generate_chat_title(text: str):
-
-    prompt = f"""
-Generate a short chat title (3-6 words).
-
-Ignore IGNORE_FOR_TITLE.
-
-Conversation:
-
-{text}
-
-Return ONLY the title.
-"""
-
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        temperature=0.1,
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
     )
 
     return (response.choices[0].message.content or "").strip()

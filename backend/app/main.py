@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from app.rag import search_medical_data
-from app.llm import generate_response, classify_query, generate_chat_title
+from app.llm import generate_response, classify_query
 from app.mongodb_service import create_conversation, save_message, get_conversations, get_messages, get_conversation, update_conversation_title, get_user_questions
 
 
@@ -39,7 +39,7 @@ async def chat(req: ChatRequest):
             conversation_id = create_conversation()
 
         # Recent history only
-        history = get_messages(conversation_id)[-6:]
+        history = get_messages(conversation_id)[-2:]
 
         # Current conversation
         conversation = get_conversation(conversation_id) or {}
@@ -50,51 +50,34 @@ async def chat(req: ChatRequest):
             False
         )
 
-        if query_type in ["GREETING","NON-MEDICAL","THANKS","GOODBYE","ACKNOWLEDGEMENT"]:
+        if query_type == "GREETING":
+             answer = "Hello! How may I help you today?"
+             save_message(conversation_id, req.message, answer)
 
-            answer = generate_response(
-            req.message,
-            [],
-            history
-            )
+        elif query_type == "THANKS":
+             answer = "You're welcome!"
+             save_message(conversation_id, req.message, answer)
 
-            save_message(
-            conversation_id,
-            req.message,
-            answer
-            )
+        elif query_type == "GOODBYE":
+             answer = "Goodbye! Take care."
+             save_message(conversation_id, req.message, answer)
+
+        elif query_type == "ACKNOWLEDGEMENT":
+             answer = "Yeh that's how."
+             save_message(conversation_id, req.message, answer)
+
+        elif query_type == "NON_MEDICAL":
+             answer = "I can assist only with healthcare-related topics."
+             save_message(conversation_id, req.message, answer)
    
         elif query_type == "FOLLOW_UP" and len(history) > 0:
               
-            recent_questions = [
-                msg["question"]
-                for msg in history[-3:]
-            ]
+            recent_questions = [msg["question"] for msg in history]
 
             search_query = " ".join(recent_questions)
             search_query += " " + req.message
 
-            context = search_medical_data(search_query, limit=5)
-
-            print("\nSEARCH QUERY:", search_query)
-            print("CONTEXT:", context)
-
-            answer = generate_response(
-                req.message,
-                context,
-                history
-            )
-
-        else:
-            recent_questions = [
-                msg["question"]
-                for msg in history[-3:]
-            ]
-
-            search_query = " ".join(recent_questions)
-            search_query += " " + req.message
-
-            context = search_medical_data(search_query)
+            context = search_medical_data(search_query, limit=3)
 
             print("\nSEARCH QUERY:", search_query)
             print("CONTEXT:", context)
@@ -111,21 +94,58 @@ async def chat(req: ChatRequest):
                 answer
             )
 
-            # Generate title once after 3 messages
-            if not title_generated:
+        else:
+            recent_questions = [msg["question"] for msg in history[-4:]]
 
-                 questions = get_user_questions(conversation_id)
+            search_query = " ".join(recent_questions)
+            search_query += " " + req.message
 
-                 if len(questions) >= 3:
+            context = search_medical_data(search_query)
 
-                     title = generate_chat_title(
-                         "\n".join(questions[:4])
-                    )
+            print("\nSEARCH QUERY:", search_query)
+            print("CONTEXT:", context)
 
-                     update_conversation_title(
-                         conversation_id,
-                         title
-                    )
+            # Non-medical query
+            if len(context) == 0:
+
+                 answer = (
+                  "I can assist only with healthcare-related topics."
+                )
+
+                 save_message(
+                  conversation_id,
+                  req.message,
+                  answer
+                )
+
+            # Medical query
+            else:
+
+                 answer = generate_response(
+                    req.message,
+                    context,
+                    history
+                )
+
+                 save_message(
+                    conversation_id,
+                    req.message,
+                    answer
+                )
+
+                 if not title_generated:
+
+                    questions = get_user_questions(conversation_id)
+
+                    if len(questions) >= 3:
+
+                        title = questions[0][:40]
+
+                        update_conversation_title(
+                           conversation_id,
+                           title
+                        )
+
 
         return {
             "conversation_id": conversation_id,
@@ -134,8 +154,10 @@ async def chat(req: ChatRequest):
 
     except Exception as e:
 
+        print("ERROR:", e)   
         return {
-            "response": f"Internal error: {str(e)}"
+            "response":
+            "I'm temporarily unavailable. Please try again in a few seconds."
         }
        
 

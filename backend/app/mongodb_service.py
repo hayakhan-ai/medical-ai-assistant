@@ -20,7 +20,6 @@ laboratories_collection = db["laboratories"]
 specialities_collection = db["specialities"]
 tests_collection = db["tests"]
 
-feedback_collection = db["feedback"]
 conversation_collection = db["conversations"]
 
 
@@ -28,7 +27,11 @@ def fetch_treatments():
     return list(
         treatments_collection.find(
             {},
-            {"_id": 0}
+            {
+                "_id": 0,
+                "subCategory": 1,
+                "description": 1
+             }
         )
     )
 
@@ -44,7 +47,10 @@ def fetch_doctors():
                 "clinicExperience": 1,
                 "about": 1,
                 "location.city": 1,
-                "phoneNumber": 1
+                "location.address": 1,
+                "phoneNumber": 1,
+                "email":1,
+                "country":1
             }
         )
     )
@@ -60,7 +66,9 @@ def fetch_hospitals():
                 "location.address": 1,
                 "emergencyNo": 1,
                 "openTime": 1,
-                "phoneNumber": 1
+                "phoneNumber": 1,
+                "email": 1,
+                "country": 1
             }
         )
     )
@@ -75,7 +83,10 @@ def fetch_laboratories():
                 "description": 1,
                 "location.city": 1,
                 "location.address": 1,
-                "phoneNumber": 1
+                "phoneNumber": 1,
+                "email": 1,
+                "emergencyNo": 1,
+                "openTime": 1
             }
         )
     )
@@ -97,10 +108,9 @@ def fetch_tests():
             {},
             {
                 "_id": 0,
-                "testName": 1,
-                "description": 1,
-                "cost": 1,
-                "preparation": 1
+                "testDescription": 1,
+                "discount": 1,
+                "duration": 1
             }
         )
     )

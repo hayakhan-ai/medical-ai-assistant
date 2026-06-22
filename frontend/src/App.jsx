@@ -101,7 +101,7 @@ export default function App() {
         <div style={styles.header}>
           <h2>Your AI Heath Companion</h2>
           <p style={{ color: "#64748B" }}>
-             Receive personalized medical guidance and connect with trusted specialists worldwide.
+             Receive personalized medical guidance
           </p>
         </div>
 
