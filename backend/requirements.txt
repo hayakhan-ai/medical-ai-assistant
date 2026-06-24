@@ -4,4 +4,11 @@ python-dotenv
 groq
 pydantic
 python-multipart
-
+pymongo
+os 
+datetime
+sentence_transformers
+qdrant_client
+faster_whisper
+edge_tts
+uuid
