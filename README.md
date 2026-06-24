@@ -1,56 +1,70 @@
-# 🏥 Medical AI Assistant
+# 🏥 MediTour Global – AI Medical Assistant
 
-An intelligent AI-powered medical assistant built with **FastAPI**, **React**, and modern AI tooling to provide fast, scalable, and modular healthcare-related conversational support.
+An intelligent AI-powered medical assistant built with **FastAPI**, **React**, **Qdrant**, and **LLMs** to provide multilingual healthcare-related conversational support.
 
-This project is designed as a backend API + frontend chatbot interface that can integrate with:
-
-* 🤖 LLMs (OpenAI, Gemini, Claude, etc.)
-* 🧠 Vector Databases (Qdrant, Pinecone)
-* 📄 RAG Pipelines
-* 🌐 Multi-platform Bots & APIs
+The assistant combines **Retrieval-Augmented Generation (RAG)** with voice capabilities and conversation memory to deliver accurate and context-aware responses.
 
 ---
 
 # ✨ Features
 
-* ⚡ FastAPI-powered backend
-* 💬 AI chatbot interaction system
-* 🌐 React frontend interface
+* 💬 AI-powered medical chatbot
+* 🧠 Retrieval-Augmented Generation (RAG)
+* 📚 Vector search using Qdrant
+* 🌐 Multi-language support
+* 🎙️ Speech-to-Text (Voice Input)
+* 🔊 Text-to-Speech (Voice Responses)
+* 🗂️ Conversation history management
+* 🏷️ Automatic chat title generation
+* ⚡ FastAPI backend
+* ⚛️ React frontend
 * 🔌 REST API architecture
-* 🧠 Easily extendable for AI integrations
-* 📡 Frontend ↔ Backend API communication
-* 🔒 Modular project structure
+* 🔒 Modular and scalable design
 
 ---
 
 # 🛠️ Tech Stack
 
-| Technology | Purpose               |
-| ---------- | --------------------- |
-| FastAPI    | Backend API Framework |
-| React      | Frontend UI           |
-| Axios      | API Communication     |
-| Uvicorn    | ASGI Server           |
-| Python     | Backend Logic         |
-| JavaScript | Frontend Logic        |
-| Qdrant     | RAG database          |
-| llama-3.3-70b-versatile | LLM      |
-| sentence transformers | embedding vectors |
+| Technology            | Purpose               |
+| --------------------- | --------------------- |
+| FastAPI               | Backend API Framework |
+| React                 | Frontend UI           |
+| Axios                 | API Communication     |
+| Python                | Backend Logic         |
+| JavaScript            | Frontend Logic        |
+| MongoDB               | Conversation History  |
+| Qdrant                | Vector Database       |
+| Sentence Transformers | Embedding Generation  |
+| Groq Llama 3.3 70B    | Large Language Model  |
+| Whisper               | Speech-to-Text        |
+| Edge-TTS              | Text-to-Speech        |
+| Uvicorn               | ASGI Server           |
 
 ---
 
 # 📂 Project Structure
 
-```bash id="u0f7kq"
+```bash
 medical-ai-assistant/
 │
 ├── backend/
 │   ├── app/
+│   │   ├── llm.py
+│   │   ├── rag.py
+│   │   ├── main.py
+│   │   ├── speech_to_text.py
+│   │   ├── tts.py
+│   │   ├── voice_service.py
+│   │   └── mongodb_service.py
+│   │
+│   ├── audio/
+│   ├── qdrant_db/
 │   ├── requirements.txt
-│   └── ...
+│   └── .env
 │
 ├── frontend/
 │   ├── src/
+│   ├── public/
 │   ├── package.json
 │   └── ...
 │
@@ -59,89 +73,100 @@ medical-ai-assistant/
 
 ---
 
-# ⚙️ Backend Setup (FastAPI)
+# 🧠 AI Architecture
 
-## 1️⃣ Navigate to backend
-
-```bash id="42ls3m"
-cd backend
-```
-
-## 2️⃣ Create virtual environment
-
-### Windows
-
-```bash id="r8q9wz"
-python -m venv venv
-venv\Scripts\activate
-```
-
-### Linux / Mac
-
-```bash id="tw6m8v"
-python3 -m venv venv
-source venv/bin/activate
+```text
+User Query
+     ↓
+Conversation History
+     ↓
+Query Expansion
+     ↓
+Qdrant Vector Search
+     ↓
+Relevant Medical Context
+     ↓
+Llama 3.3 70B
+     ↓
+Response Generation
+     ↓
+Text Response / Voice Response
 ```
 
 ---
 
-## 3️⃣ Install dependencies
+# ⚙️ Backend Setup
 
-```bash id="9up7c2"
+## Create Virtual Environment
+
+### Windows
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+### Linux / Mac
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+---
+
+## Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
 ---
 
-## 4️⃣ Run FastAPI server
+## Run FastAPI
 
-```bash id="1af3kj"
+```bash
 uvicorn app.main:app --reload
 ```
 
-Backend runs on:
+Backend:
 
-```bash id="s6elx9"
+```
 http://127.0.0.1:8000
 ```
 
 ---
 
-# ⚛️ Frontend Setup (React)
+# ⚛️ Frontend Setup
 
-## 1️⃣ Navigate to frontend
-
-```bash id="y1v2k8"
+```bash
 cd frontend
-```
-
-## 2️⃣ Install dependencies
-
-```bash id="u7m4qp"
 npm install
-```
-
----
-
-## 3️⃣ Start React app
-
-```bash id="k0d9nx"
 npm run dev
 ```
 
-or
+Frontend:
 
-```bash id="9g2sfd"
-npm start
+```
+http://localhost:5173
 ```
 
-depending on your setup.
+---
 
-Frontend usually runs on:
+# 🚀 Current Capabilities
 
-```bash id="v4n8cb"
-http://localhost:5173
+* Medical RAG system
+* Multi-turn conversation memory
+* Voice chat support
+* Automatic chat title generation
+* Qdrant vector search
+* Multilingual responses
+* Fast and scalable architecture
+
 ---
 
 
+
+
+This application is intended for informational purposes only and does not replace professional medical advice, diagnosis, or treatment.
 
