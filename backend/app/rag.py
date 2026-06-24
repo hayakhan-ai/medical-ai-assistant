@@ -300,14 +300,13 @@ Discount:
     )
 
 
-def search_medical_data(query, limit=3):
+def search_medical_data(query, limit=20):
     query_embedding = np.array(model.encode(query, normalize_embeddings=True)).tolist()
 
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,
-        limit=limit,
-        score_threshold=0.6
+        limit=limit
      )
 
     print("\nQUERY:", query)

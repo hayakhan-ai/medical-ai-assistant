@@ -1,13 +1,22 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from app.rag import search_medical_data
-from app.llm import generate_response, classify_query
+from app.llm import generate_response, small_reply, generate_title, classify_query
 from app.mongodb_service import create_conversation, save_message, get_conversations, get_messages, get_conversation, update_conversation_title, get_user_questions
-
+from app.voice_service import voice_chat
+import os
 
 app = FastAPI()
+
+
+app.mount(
+    "/audio",
+    StaticFiles(directory="audio"),
+    name="audio"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,7 +29,6 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
-    
 
 @app.get("/")
 def home():
@@ -28,9 +36,6 @@ def home():
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
-
-    query_type = classify_query(req.message)
-
     try:
 
         conversation_id = req.conversation_id
@@ -38,49 +43,46 @@ async def chat(req: ChatRequest):
         if not conversation_id:
             conversation_id = create_conversation()
 
-        # Recent history only
-        history = get_messages(conversation_id)[-2:]
+        history = get_messages(conversation_id)[-8:]
 
-        # Current conversation
         conversation = get_conversation(conversation_id) or {}
+        title_generated = conversation.get("title_generated", False)
 
-        # Has title already been generated?
-        title_generated = conversation.get(
-            "title_generated",
-            False
+        query_type = classify_query(
+            req.message,
+            history
         )
 
-        if query_type == "GREETING":
-             answer = "Hello! How may I help you today?"
-             save_message(conversation_id, req.message, answer)
+        # greetings
+        if query_type in [
+            "GREETING",
+            "THANKS",
+            "GOODBYE",
+            "ACKNOWLEDGEMENT"
+        ]:
 
-        elif query_type == "THANKS":
-             answer = "You're welcome!"
-             save_message(conversation_id, req.message, answer)
+            answer = small_reply(
+                req.message,
+                """
+Respond naturally and briefly.
+Reply in the user's language.
+"""
+            )
 
-        elif query_type == "GOODBYE":
-             answer = "Goodbye! Take care."
-             save_message(conversation_id, req.message, answer)
+        else:
 
-        elif query_type == "ACKNOWLEDGEMENT":
-             answer = "Yeh that's how."
-             save_message(conversation_id, req.message, answer)
+            # RAG ONLY uses current question
+            context = search_medical_data(
+                req.message,
+                limit=20
+            )
 
-        elif query_type == "NON_MEDICAL":
-             answer = "I can assist only with healthcare-related topics."
-             save_message(conversation_id, req.message, answer)
-   
-        elif query_type == "FOLLOW_UP" and len(history) > 0:
-              
-            recent_questions = [msg["question"] for msg in history]
+            print("\nQUESTION:")
+            print(req.message)
 
-            search_query = " ".join(recent_questions)
-            search_query += " " + req.message
-
-            context = search_medical_data(search_query, limit=3)
-
-            print("\nSEARCH QUERY:", search_query)
-            print("CONTEXT:", context)
+            print("\nCONTEXT:")
+            for item in context:
+                print(item)
 
             answer = generate_response(
                 req.message,
@@ -88,64 +90,30 @@ async def chat(req: ChatRequest):
                 history
             )
 
-            save_message(
-                conversation_id,
-                req.message,
-                answer
-            )
+            print("\nFINAL ANSWER:")
+            print(answer)
 
-        else:
-            recent_questions = [msg["question"] for msg in history[-4:]]
+        save_message(
+            conversation_id,
+            req.message,
+            answer
+        )
 
-            search_query = " ".join(recent_questions)
-            search_query += " " + req.message
+        # generate title once
+        if not title_generated:
 
-            context = search_medical_data(search_query)
+            questions = get_user_questions(conversation_id)
 
-            print("\nSEARCH QUERY:", search_query)
-            print("CONTEXT:", context)
+            if len(questions) >= 3:
 
-            # Non-medical query
-            if len(context) == 0:
-
-                 answer = (
-                  "I can assist only with healthcare-related topics."
+                title = generate_title(
+                    get_messages(conversation_id)[-6:]
                 )
 
-                 save_message(
-                  conversation_id,
-                  req.message,
-                  answer
-                )
-
-            # Medical query
-            else:
-
-                 answer = generate_response(
-                    req.message,
-                    context,
-                    history
-                )
-
-                 save_message(
+                update_conversation_title(
                     conversation_id,
-                    req.message,
-                    answer
+                    title
                 )
-
-                 if not title_generated:
-
-                    questions = get_user_questions(conversation_id)
-
-                    if len(questions) >= 3:
-
-                        title = questions[0][:40]
-
-                        update_conversation_title(
-                           conversation_id,
-                           title
-                        )
-
 
         return {
             "conversation_id": conversation_id,
@@ -154,32 +122,83 @@ async def chat(req: ChatRequest):
 
     except Exception as e:
 
-        print("ERROR:", e)   
+        print("ERROR:", e)
+
         return {
             "response":
             "I'm temporarily unavailable. Please try again in a few seconds."
         }
-       
 
 @app.get("/chat-history")
 async def chat_history():
-
     conversations = get_conversations()
-
     return conversations
 
 @app.post("/new-chat")
 async def new_chat():
-
     conversation_id = create_conversation()
-
-    return {
-        "conversation_id": conversation_id
-    }
+    return {"conversation_id": conversation_id}
 
 @app.get("/conversation/{conversation_id}")
 async def conversation(conversation_id: str):
-
     conversation = get_conversation(conversation_id)
-
     return conversation
+
+@app.post("/voice-chat")
+async def voice_endpoint(
+    file: UploadFile = File(...),
+    conversation_id: str = ""
+):
+    try:
+        # create conversation if none exists
+        if not conversation_id:
+            conversation_id = create_conversation()
+
+        path = "temp.webm"    
+
+        with open(path, "wb") as f:
+            f.write(await file.read())
+
+        history = get_messages(conversation_id)[-8:]
+
+        result = await voice_chat(
+            path,
+            history
+        )
+
+        save_message(
+            conversation_id,
+            result["query"],
+            result["response"]
+        )
+
+        # title generation
+        conversation = get_conversation(conversation_id) or {}
+        title_generated = conversation.get("title_generated", False)
+
+        if not title_generated:
+            questions = get_user_questions(conversation_id)
+            if len(questions) >= 3:
+                title = generate_title(
+                    get_messages(conversation_id)[-6:]
+                )
+                update_conversation_title(
+                    conversation_id,
+                    title
+                )
+
+        if os.path.exists(path):
+            os.remove(path)        
+
+        return {
+            "conversation_id": conversation_id,
+            "query": result["query"],
+            "response": result["response"],
+            "language": result["language"],
+            "audio": f"audio/{result['audio_file']}"
+        }
+    except Exception as e:
+        print("ERROR:", e)
+        return {
+            "response": "Voice service temporarily unavailable."
+        }

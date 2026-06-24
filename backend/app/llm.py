@@ -7,52 +7,47 @@ load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-
 GREETINGS = {
-    "hi","hello","hey","good morning",
-    "good evening"
+    "hi", "hello", "hey", "good morning", "good evening"
 }
 
 THANKS = {
-    "thanks","thank you","ty","thnx"
+    "thanks", "thank you", "thx", "ty"
 }
 
 GOODBYES = {
-    "bye","goodbye","see ya","later"
+    "bye", "goodbye", "see you", "take care"
 }
 
 ACKNOWLEDGEMENTS = {
-    "ok","okay","alright","got it","hmm"
+    "ok", "okay", "alright", "got it", "hmm"
 }
 
-MEDICAL= {
-"Diseases",
-"Symptoms",
-"Treatments",
-"Doctors",
- "Hospitals",
- "Healthcare",
- "Diagnostics",
- "Medical specialities",
- "Tests"      
-}
-
-FOLLOW_UPS = {
-    "yes","yeah","tell me more",
-    "details","explain",
-    "side effects","risks",
-    "benefits","location","price",
-    "recovery","duration",
-    "treatment","doctor",
-    "hospital","tests",
-    "what about it",
-    "what about this",
+FOLLOW_UP_KEYWORDS = [
+    "which doctor",
+    "which specialist",
+    "doctor?",
+    "specialist?",
+    "name and location",
+    "location",
+    "country",
+    "tests",
+    "what should i do",
     "is it dangerous",
-    "how much","tell me more"
-}
+    "how urgent",
+    "can i wait",
+    "medicine",
+    "treatment",
+    "more options",
+    "female doctor",
+    "hospital",
+    "doctor name",
+    "which one",
+    "what about that"
+]
 
-NON_MEDICAL ={ "every thing unrelated to medical data"}
-def classify_query(query):
+
+def classify_query(query: str, history=None):
     q = query.lower().strip()
 
     if q in GREETINGS:
@@ -66,13 +61,13 @@ def classify_query(query):
 
     if q in ACKNOWLEDGEMENTS:
         return "ACKNOWLEDGEMENT"
-    
-    if q in FOLLOW_UPS:
-        return "FOLLOW_UP"
-    
-    if q in NON_MEDICAL:
-        return "Non_Medical"
 
+    # Very short questions after previous medical conversation
+    if history and len(history) > 0:
+        if len(q.split()) <= 8:
+            for keyword in FOLLOW_UP_KEYWORDS:
+                if keyword in q:
+                    return "FOLLOW_UP"
 
     return "MEDICAL_QUERY"
 
@@ -235,14 +230,33 @@ You are a multilingual Medical AI Assistant.
 
 Rules:
 
-- Use supplied medical context and recent conversation.
-- Never invent doctors, hospitals, tests, prices, phone numbers, or treatments.
-- Reply entirely in the user's language and script, if their GREETINGS, GOODBYES, THANKS, ACKNOWLEDGEMENTS, FOLLOW_UPS in their language reply in that specific language.
-- Discuss possibilities, not diagnoses.
-- Ignore unrelated retrieved information.
-- Ask follow-up questions when necessary.
-- Recommend doctors, hospitals, tests, or laboratories only if present in the supplied context.
-- If information is unavailable, clearly state that it is unavailable.
+Use the supplied medical context and recent conversation history.
+Reply entirely in the user's language and script.
+Discuss possibilities, not diagnoses.
+Ignore unrelated retrieved information.
+Ask follow-up questions only when necessary.
+Never invent doctor names, hospitals, phone numbers, addresses, prices, tests, or treatments.
+You may use general medical knowledge to recommend the appropriate medical specialty.
+If doctors, hospitals, laboratories, or tests are present in the supplied context, always mention them explicitly.
+Never say information is unavailable when these entities are present.
+Prioritize retrieved entities over general medical advice.
+If no doctor, hospital, laboratory, or test is found in the context, recommend the appropriate specialty instead.
+Never repeat or paraphrase the user's question as the answer.
+Always answer the user's question before asking additional questions.
+Use recent conversation history to infer follow-up questions such as:
+Which doctor?
+Which specialist?
+Is it dangerous?
+What should I do?
+Which tests should I get?
+Should I consult a doctor?
+How urgent is this?
+If exact information is unavailable, explain what is known and provide general guidance.
+If symptoms suggest a potentially serious condition, advise seeking prompt medical evaluation.
+Never claim certainty when the information is insufficient.
+Never say "that information is unavailable" if general medical knowledge can answer the question safely.
+Do not ask unnecessary questions after already providing an answer.
+When a user asks a short follow-up question, interpret it in the context of previous symptoms and previous answers rather than treating it as an isolated question.
 
 """
         }
@@ -270,28 +284,90 @@ Rules:
     messages.append({
              "role":"system",
              "content":f"""
-             Medical context:
+             Medical Context (retrieved data):
+                {medical_context}
 
-              {medical_context}
-
-             Only use information found above.
-             Ignore irrelevant entries.
-             Do not invent missing information.
-             """
+                 User question:
+                {query}
+            """
              })
 
     messages.append(
          {
           "role":"user",
-          "content":query
+          "content":f"""
+    Question: {query}
+    """
 }
 )
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        temperature=0.1,
-        max_completion_tokens=400,
-        messages=cast(Any, messages)
-    )
+           model="llama-3.3-70b-versatile",
+           temperature=0.2,
+           max_completion_tokens=500,
+           messages=cast(Any, messages)
+        )
 
     return (response.choices[0].message.content or "").strip()
+
+def small_reply(user_message, instruction):
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        temperature=0,
+        max_completion_tokens=40,
+        messages=[
+        {
+            "role":"system",
+            "content":f"""
+{instruction}
+
+Reply in exactly the same language and script as the user.
+Keep the response short.
+"""
+        },
+        {
+            "role":"user",
+            "content":user_message
+        }
+        ]
+    )
+
+    return (
+        response.choices[0].message.content or ""
+    ).strip()
+
+def generate_title(history):
+
+    text = "\n".join(
+        [f"User: {m['question']}\nAssistant: {m['answer']}"
+         for m in history]
+    )
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        temperature=0,
+        max_completion_tokens=15,
+        messages=[
+            {
+                "role":"system",
+                "content":"""
+Generate a very short chat title (3-6 words).
+
+Examples:
+Joint Pain Consultation
+Kidney Stone Symptoms
+Finding Female Gynecologist
+Stomach Pain and Fever
+
+Return only the title.
+"""
+            },
+            {
+                "role":"user",
+                "content":text
+            }
+        ]
+    )
+
+    return (response.choices[0].message.content or "").strip()   
